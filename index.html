@@ -1353,6 +1353,7 @@ class Enemy extends Entity {
     const dx = player.mesh.position.x - this.mesh.position.x;
     const dz = player.mesh.position.z - this.mesh.position.z;
     const dist = Math.hypot(dx, dz);
+    const isRunner = engine.gameConfig?.autoRun;
 
     if (dist > 50) {
       this.vel.x = (dx / dist) * this.speed;
@@ -1369,6 +1370,9 @@ class Enemy extends Entity {
 
     const moving = (this.vel.x !== 0 || this.vel.z !== 0) && this.onGround;
     this.animate(moving, !this.onGround, time, this.speed);
+
+    // Runner mode: enemies don't shoot — contact = death (handled in game loop)
+    if (isRunner) return;
 
     this.cooldown -= dt;
     if (this.cooldown <= 0 && dist < 600) {
@@ -2421,14 +2425,51 @@ class GameEngine {
     // 3b. Wave system
     if (cfg.hasWaves) this.waveManager.update(dt);
 
-    // 4. Enemies
+    // 4. Enemies + melee contact
+    const playerPos = this.player.mesh.position;
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
       e.update(dt, time, this.player, this.physics, this.world.platforms, this);
-      if (cfg.worldMode === 'infinite' && e.mesh.position.x < this.player.mesh.position.x - 1500) {
+
+      // Cleanup far enemies in infinite modes
+      if (cfg.worldMode === 'infinite' && e.mesh.position.x < playerPos.x - 1500) {
         this.sceneManager.remove(e.mesh);
         this.enemies.splice(i, 1);
+        continue;
       }
+
+      // Melee contact — Runner: instant death. Others: contact damage
+      const ep = e.mesh.position;
+      const ehw = e.type === 'boss' ? 36 : 24;
+      const contactDist = Math.hypot(playerPos.x - ep.x, playerPos.z - ep.z);
+      if (contactDist < ehw + 15 && Math.abs(playerPos.y - ep.y) < 40) {
+        if (cfg.autoRun) {
+          // Runner: any contact = instant death
+          this._gameOver();
+          return;
+        } else {
+          // Other modes: melee push + damage (cooldown so it doesn't instakill)
+          if (!e._meleeCd || e._meleeCd <= 0) {
+            this.player.takeDamage(e.dmg * 0.5);
+            this.audio.playerHit();
+            this.cameraShake.trigger(4);
+            // Push player away
+            const pushX = (playerPos.x - ep.x) / (contactDist || 1) * 6;
+            const pushZ = (playerPos.z - ep.z) / (contactDist || 1) * 6;
+            this.player.vel.x += pushX;
+            this.player.vel.z += pushZ;
+            e._meleeCd = 40; // ~0.7s cooldown
+            if (this.player.health <= 0) { this._gameOver(); return; }
+          }
+          if (e._meleeCd > 0) e._meleeCd -= dt;
+        }
+      }
+    }
+
+    // 4b. Wave safety sync — if all enemies dead but waveManager thinks there are more
+    if (cfg.hasWaves && this.waveManager.active && this.enemies.length === 0 && this.waveManager.enemiesRemaining > 0 && this.waveManager.waveDelay <= 0) {
+      this.waveManager.enemiesRemaining = 0;
+      this.waveManager.waveDelay = 90; // trigger next wave in ~1.5s
     }
 
     // 5. Bullets
