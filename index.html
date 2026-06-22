@@ -337,7 +337,65 @@
       <div class="highscore" id="hs-arena"></div>
     </div>
   </div>
+  <div style="margin-top:clamp(16px,3vh,28px);display:flex;gap:10px">
+    <button class="gameover-btn" id="btn-editor" style="font-size:12px;padding:8px 20px;letter-spacing:2px">EDITOR</button>
+    <button class="gameover-btn" id="btn-export-config" style="font-size:12px;padding:8px 20px;letter-spacing:2px">EXPORT JSON</button>
+  </div>
   <div id="menu-footer">WASD + MOUSE &middot; [`] DEBUG &middot; MOBILE READY &middot; v2.1</div>
+</div>
+
+<!-- === EDITOR PANEL === -->
+<div id="editor-screen" style="position:absolute;inset:0;z-index:100;background:radial-gradient(ellipse at 30% 40%,#1a1218 0%,#0a0506 70%);display:none;font-family:'Courier New',monospace;color:#eee;overflow-y:auto">
+  <div style="max-width:800px;margin:0 auto;padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="color:var(--eng-primary);letter-spacing:4px;font-size:20px">EDITOR</h2>
+      <button class="gameover-btn" id="btn-editor-back" style="font-size:11px;padding:6px 16px">VOLVER</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <!-- Theme -->
+      <fieldset style="border:1px solid #333;padding:12px;border-radius:6px">
+        <legend style="color:var(--eng-primary);letter-spacing:2px;font-size:12px;padding:0 6px">THEME</legend>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Primary
+          <input type="color" id="ed-theme-primary" value="#ff2d4d" style="width:100%;height:28px;margin-top:2px;cursor:pointer;border:none;background:transparent"></label>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Ground
+          <input type="color" id="ed-theme-ground" value="#3d2b2b" style="width:100%;height:28px;margin-top:2px;cursor:pointer;border:none;background:transparent"></label>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Background
+          <input type="color" id="ed-theme-bg" value="#0a0506" style="width:100%;height:28px;margin-top:2px;cursor:pointer;border:none;background:transparent"></label>
+      </fieldset>
+
+      <!-- Player -->
+      <fieldset style="border:1px solid #333;padding:12px;border-radius:6px">
+        <legend style="color:var(--eng-primary);letter-spacing:2px;font-size:12px;padding:0 6px">PLAYER</legend>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Jacket
+          <input type="color" id="ed-player-jacket" value="#fdd835" style="width:100%;height:28px;margin-top:2px;cursor:pointer;border:none;background:transparent"></label>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Pants
+          <input type="color" id="ed-player-pants" value="#1a237e" style="width:100%;height:28px;margin-top:2px;cursor:pointer;border:none;background:transparent"></label>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Hair
+          <input type="color" id="ed-player-hair" value="#4e342e" style="width:100%;height:28px;margin-top:2px;cursor:pointer;border:none;background:transparent"></label>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Skin
+          <input type="color" id="ed-player-skin" value="#f1c27d" style="width:100%;height:28px;margin-top:2px;cursor:pointer;border:none;background:transparent"></label>
+      </fieldset>
+
+      <!-- Enemies -->
+      <fieldset style="border:1px solid #333;padding:12px;border-radius:6px">
+        <legend style="color:var(--eng-primary);letter-spacing:2px;font-size:12px;padding:0 6px">ENEMIES</legend>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Grunt HP <input type="number" id="ed-grunt-hp" value="50" style="width:60px;background:#1a1a1a;border:1px solid #444;color:#eee;padding:2px 6px;font-family:inherit;margin-left:6px"></label>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Heavy HP <input type="number" id="ed-heavy-hp" value="120" style="width:60px;background:#1a1a1a;border:1px solid #444;color:#eee;padding:2px 6px;font-family:inherit;margin-left:6px"></label>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Boss HP <input type="number" id="ed-boss-hp" value="500" style="width:60px;background:#1a1a1a;border:1px solid #444;color:#eee;padding:2px 6px;font-family:inherit;margin-left:6px"></label>
+      </fieldset>
+
+      <!-- Pickups -->
+      <fieldset style="border:1px solid #333;padding:12px;border-radius:6px">
+        <legend style="color:var(--eng-primary);letter-spacing:2px;font-size:12px;padding:0 6px">PICKUPS</legend>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Health Heal <input type="number" id="ed-pickup-heal" value="30" style="width:60px;background:#1a1a1a;border:1px solid #444;color:#eee;padding:2px 6px;font-family:inherit;margin-left:6px"></label>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Health Spawn % <input type="number" id="ed-pickup-health-chance" value="15" min="0" max="100" style="width:60px;background:#1a1a1a;border:1px solid #444;color:#eee;padding:2px 6px;font-family:inherit;margin-left:6px"></label>
+        <label style="font-size:11px;color:#888;display:block;margin-top:6px">Speed Boost <input type="number" id="ed-pickup-speed-boost" value="200" step="10" style="width:60px;background:#1a1a1a;border:1px solid #444;color:#eee;padding:2px 6px;font-family:inherit;margin-left:6px">%</label>
+      </fieldset>
+    </div>
+
+    <button id="btn-apply-editor" style="margin-top:16px;padding:10px 24px;background:var(--eng-primary);color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:bold;letter-spacing:2px;width:100%;transition:background 0.2s">APLICAR CAMBIOS</button>
+  </div>
 </div>
 
 <!-- === GAME OVER === -->
@@ -509,6 +567,18 @@ const DEFAULT_CONFIG = {
   particles: {
     blood: { count: 4, spread: 8, gravity: 0.4, life: 18, color: '#aa0000' },
     levelUp: { count: 12, spread: 5, gravity: -0.2, life: 30, color: '#ffeb3b' }
+  },
+  biomes: {
+    wasteland: { ground: '#3d2b2b', platform: '#5a4a44', wall: '#7a4a40', fog: '#3d2b2b', props: ['rock', 'deadTree', 'crate'], propDensity: 0.4 },
+    forest:    { ground: '#2d4a2d', platform: '#4a6a3a', wall: '#5a7a4a', fog: '#2d4a2d', props: ['tree', 'bush', 'rock'], propDensity: 0.7 },
+    snow:      { ground: '#c8d8e8', platform: '#9ab0c4', wall: '#8aa0b4', fog: '#c8d8e8', props: ['snowRock', 'deadTree', 'iceBlock'], propDensity: 0.3 },
+    lava:      { ground: '#3a1a0a', platform: '#5a2a1a', wall: '#7a3a2a', fog: '#3a1a0a', props: ['rock', 'lavaRock', 'crate'], propDensity: 0.35 },
+    desert:    { ground: '#c4a868', platform: '#a88a4a', wall: '#8a7040', fog: '#c4a868', props: ['cactus', 'rock', 'deadTree'], propDensity: 0.25 },
+  },
+  pickups: {
+    health: { color: '#4caf50', heal: 30, spawnChance: 0.15 },
+    speed:  { color: '#2196f3', duration: 300, boost: 2.0, spawnChance: 0.08 },
+    damage: { color: '#ff5722', duration: 300, boost: 1.5, spawnChance: 0.08 },
   },
   audio: { sfxVolume: 0.7 },
   gameTypes: null // null = use built-in GAME_TYPES
@@ -1026,6 +1096,8 @@ class DebugOverlay {
       `<div>Platforms: ${engine.world.platforms.length} | Decos: ${engine.world.decorations.length}</div>` +
       `<div>Pool bullets: ${engine.bulletPool.pool.length}+${engine.bulletPool.activeCount} | particles: ${engine.particlePool.pool.length}+${engine.particlePool.activeCount}</div>` +
       (cfg?.hasWaves ? `<div>Wave: ${engine.waveManager.wave} | Remaining: ${engine.waveManager.enemiesRemaining}</div>` : '') +
+      `<div>Pickups: ${engine.world.pickups.filter(p=>!p.collected).length} | Hazards: ${engine.world.hazards.length}</div>` +
+      `<div>Biome: ${engine.world._biome ? Object.entries(GameConfig.get().biomes||{}).find(([k,v])=>v===engine.world._biome)?.[0]||'custom' : 'default'} | Chunk#: ${engine.world._biomeChunkCounter}/${engine.world._biomeLength}</div>` +
       `<div>Shake: ${engine.cameraShake.intensity.toFixed(1)}</div>`;
   }
 }
@@ -1314,15 +1386,91 @@ class Enemy extends Entity {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 7. WORLD MANAGER — Procedural infinite terrain
+// 7. WORLD MANAGER — Procedural terrain + Biomes + Props + Pickups
 // ═══════════════════════════════════════════════════════════
+
+class PropFactory {
+  static _geo = new THREE.BoxGeometry(1, 1, 1);
+
+  static _mat(color) {
+    return new THREE.MeshStandardMaterial({ color: EntityFactory._parseColor(color), roughness: 0.8, metalness: 0.05 });
+  }
+
+  static _box(group, w, h, d, color, x, y, z) {
+    const m = new THREE.Mesh(PropFactory._geo, PropFactory._mat(color));
+    m.scale.set(w, h, d);
+    m.position.set(x, y, z);
+    group.add(m);
+    return m;
+  }
+
+  static create(type) {
+    const group = new THREE.Group();
+    const b = PropFactory._box.bind(null, group);
+    switch (type) {
+      case 'tree':
+        b(12, 60, 12, '#5d4037', 0, 30, 0);   // trunk
+        b(40, 30, 40, '#2e7d32', 0, 65, 0);   // leaves bottom
+        b(28, 24, 28, '#388e3c', 0, 82, 0);   // leaves mid
+        b(16, 18, 16, '#43a047', 0, 96, 0);   // leaves top
+        break;
+      case 'deadTree':
+        b(10, 50, 10, '#4e342e', 0, 25, 0);   // trunk
+        b(6, 20, 6, '#5d4037', 8, 42, 0);     // branch R
+        b(6, 16, 6, '#5d4037', -6, 38, 4);    // branch L
+        break;
+      case 'bush':
+        b(24, 16, 24, '#33691e', 0, 8, 0);
+        b(18, 12, 18, '#558b2f', 4, 16, 2);
+        break;
+      case 'rock':
+        b(30 + Math.random() * 20, 18 + Math.random() * 12, 28 + Math.random() * 16, '#616161', 0, 10, 0);
+        b(16, 10, 14, '#757575', 8, 20, 4);
+        break;
+      case 'snowRock':
+        b(30, 20, 28, '#90a4ae', 0, 10, 0);
+        b(32, 6, 30, '#eceff1', 0, 22, 0);    // snow cap
+        break;
+      case 'iceBlock':
+        b(22, 28, 22, '#b3e5fc', 0, 14, 0);
+        b(18, 24, 18, '#81d4fa', 0, 12, 0);
+        break;
+      case 'cactus':
+        b(10, 40, 10, '#2e7d32', 0, 20, 0);   // main
+        b(8, 20, 8, '#388e3c', 14, 28, 0);    // arm R
+        b(8, 6, 8, '#388e3c', 14, 18, 0);     // arm R connector
+        b(8, 16, 8, '#43a047', -12, 24, 0);   // arm L
+        b(8, 6, 8, '#43a047', -12, 16, 0);
+        break;
+      case 'lavaRock':
+        b(26, 22, 24, '#37474f', 0, 11, 0);
+        b(14, 4, 12, '#ff5722', 2, 0, 2);     // lava glow at base
+        break;
+      case 'crate':
+        b(22, 22, 22, '#795548', 0, 11, 0);
+        b(24, 2, 24, '#5d4037', 0, 22, 0);    // lid
+        b(2, 22, 2, '#4e342e', 11, 11, 11);   // edge
+        b(2, 22, 2, '#4e342e', -11, 11, -11);
+        break;
+      default: // fallback cube
+        b(20, 20, 20, '#9e9e9e', 0, 10, 0);
+    }
+    group.userData.propType = type;
+    return group;
+  }
+}
 
 class WorldManager {
   constructor(scene) {
     this.scene = scene;
     this.platforms = [];
     this.decorations = [];
+    this.pickups = [];
+    this.hazards = [];
     this.lastX = 0;
+    this._biome = null;
+    this._biomeChunkCounter = 0;
+    this._biomeLength = 8; // chunks per biome
 
     this._platGeo = new THREE.BoxGeometry(1, 1, 1);
     this._mats = {
@@ -1330,12 +1478,36 @@ class WorldManager {
       platform: new THREE.MeshStandardMaterial({ color: 0x5a4a44, roughness: 0.8 }),
       wall: new THREE.MeshStandardMaterial({ color: 0x7a4a40, roughness: 0.7 }),
       deco: new THREE.MeshStandardMaterial({ color: 0x0a0305, roughness: 1 }),
-      invisible: new THREE.MeshBasicMaterial({ visible: false })
+      invisible: new THREE.MeshBasicMaterial({ visible: false }),
+      hazard: new THREE.MeshStandardMaterial({ color: 0xff3300, roughness: 0.3, emissive: 0xff2200, emissiveIntensity: 0.4 }),
+      pickup: new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: 0.3, emissive: 0x4caf50, emissiveIntensity: 0.3 }),
     };
   }
 
   setGroundColor(hexColor) {
     this._mats.ground.color.set(hexColor);
+  }
+
+  _getBiome() {
+    const cfg = GameConfig.get();
+    const biomes = cfg.biomes || {};
+    const keys = Object.keys(biomes);
+    if (keys.length === 0) return null;
+    return biomes[keys[Math.floor(Math.random() * keys.length)]];
+  }
+
+  _applyBiome(biome, sceneManager) {
+    if (!biome) return;
+    this._biome = biome;
+    if (biome.ground) {
+      this._mats.ground.color.set(biome.ground);
+      this._mats.platform.color.set(biome.platform || biome.ground);
+      this._mats.wall.color.set(biome.wall || biome.ground);
+      if (sceneManager) {
+        sceneManager.setGroundColor(biome.ground);
+        document.body.style.background = biome.ground;
+      }
+    }
   }
 
   addPlatform(x, y, z, w, h, d, type, isBase = false, invisible = false) {
@@ -1347,12 +1519,55 @@ class WorldManager {
     this.platforms.push({ mesh, x, y, z, w, h, d, type, isBase, invisible });
   }
 
+  addPickup(x, y, z, type) {
+    const cfg = GameConfig.get();
+    const pCfg = cfg.pickups?.[type];
+    if (!pCfg) return;
+    const group = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({
+      color: EntityFactory._parseColor(pCfg.color),
+      roughness: 0.3, emissive: EntityFactory._parseColor(pCfg.color), emissiveIntensity: 0.4
+    });
+    // Floating diamond shape
+    const geo = this._platGeo;
+    const core = new THREE.Mesh(geo, mat);
+    core.scale.set(12, 12, 12);
+    core.rotation.set(Math.PI / 4, 0, Math.PI / 4);
+    group.add(core);
+    // Glow ring
+    const ring = new THREE.Mesh(geo, mat.clone());
+    ring.material.transparent = true;
+    ring.material.opacity = 0.3;
+    ring.scale.set(20, 2, 20);
+    group.add(ring);
+
+    group.position.set(x, y, z);
+    this.scene.add(group);
+    this.pickups.push({ mesh: group, x, y, z, type, config: pCfg, collected: false });
+  }
+
+  addHazard(x, y, z, w, d) {
+    const mesh = new THREE.Mesh(this._platGeo, this._mats.hazard);
+    mesh.scale.set(w, 4, d);
+    mesh.position.set(x, y, z);
+    this.scene.add(mesh);
+    this.hazards.push({ mesh, x, y, z, w: w, h: 4, d: d });
+  }
+
   initWorld(zWidth = 4000) {
     this.platforms.forEach(p => this.scene.remove(p.mesh));
     this.decorations.forEach(d => this.scene.remove(d));
+    this.pickups.forEach(p => this.scene.remove(p.mesh));
+    this.hazards.forEach(h => this.scene.remove(h.mesh));
     this.platforms.length = 0;
     this.decorations.length = 0;
+    this.pickups.length = 0;
+    this.hazards.length = 0;
     this.lastX = 0;
+    this._biomeChunkCounter = 0;
+
+    // Pick initial biome
+    this._biome = this._getBiome();
 
     this.addPlatform(50000, -20, 0, 100000, 20, Math.max(zWidth, 4000), 'ground', true);
     const wallZ = zWidth / 2;
@@ -1360,10 +1575,55 @@ class WorldManager {
     this.addPlatform(50000, 150, -wallZ, 100000, 500, 10, 'wall', true, true);
   }
 
-  generateChunk(spawnEnemyCb, isRunner = false) {
+  _spawnProps(x, zRange) {
+    const biome = this._biome;
+    if (!biome || !biome.props) return;
+    const density = biome.propDensity || 0.4;
+    const propTypes = biome.props;
+
+    // Props on both sides and in the field
+    const propCount = Math.floor(3 * density + Math.random() * 4 * density);
+    for (let i = 0; i < propCount; i++) {
+      const pType = propTypes[Math.floor(Math.random() * propTypes.length)];
+      const prop = PropFactory.create(pType);
+      const pz = (Math.random() - 0.5) * zRange;
+      const px = x + Math.random() * 250;
+      const scale = 0.7 + Math.random() * 0.6;
+      prop.scale.setScalar(scale);
+      prop.position.set(px, 0, pz);
+      prop.rotation.y = Math.random() * Math.PI * 2;
+      this.scene.add(prop);
+      this.decorations.push(prop);
+    }
+    // Background silhouette props (far away, larger)
+    for (let side = -1; side <= 1; side += 2) {
+      if (Math.random() > 0.4) {
+        const pType = propTypes[Math.floor(Math.random() * propTypes.length)];
+        const prop = PropFactory.create(pType);
+        prop.scale.setScalar(2.5 + Math.random() * 1.5);
+        prop.position.set(x + Math.random() * 200, 0, side * (1400 + Math.random() * 400));
+        this.scene.add(prop);
+        this.decorations.push(prop);
+      }
+    }
+  }
+
+  generateChunk(spawnEnemyCb, isRunner = false, sceneManager = null) {
     const x = this.lastX + (isRunner ? 200 : 300);
     const zRange = isRunner ? 350 : 1400;
     const z = () => (Math.random() - 0.5) * zRange;
+    const cfg = GameConfig.get();
+
+    // Biome transition every N chunks
+    this._biomeChunkCounter++;
+    if (this._biomeChunkCounter >= this._biomeLength) {
+      this._biomeChunkCounter = 0;
+      this._biomeLength = 6 + Math.floor(Math.random() * 8);
+      const newBiome = this._getBiome();
+      if (newBiome && newBiome !== this._biome) {
+        this._applyBiome(newBiome, sceneManager);
+      }
+    }
 
     if (isRunner) {
       const obstacleType = Math.random();
@@ -1378,6 +1638,15 @@ class WorldManager {
       }
       if (Math.random() > 0.5) spawnEnemyCb(x + 80, 50, z() * 0.5);
     } else {
+      // Terrain elevation — raised ground patches
+      if (Math.random() > 0.6) {
+        const elev = 5 + Math.random() * 15;
+        const ew = 150 + Math.random() * 200;
+        const ed = 200 + Math.random() * 300;
+        this.addPlatform(x + Math.random() * 150, elev / 2, z() * 0.4, ew, elev, ed, 'ground');
+      }
+
+      // Standard platforms + cover
       const platCount = 1 + Math.floor(Math.random() * 2);
       for (let i = 0; i < platCount; i++) {
         if (Math.random() > 0.3) {
@@ -1388,15 +1657,29 @@ class WorldManager {
       if (Math.random() > 0.4) {
         this.addPlatform(x + 80 + Math.random() * 100, 35, z(), 30 + Math.random() * 30, 70, 30 + Math.random() * 30, 'wall');
       }
-      for (let side = -1; side <= 1; side += 2) {
-        if (Math.random() > 0.3) {
-          const bgMesh = new THREE.Mesh(this._platGeo, this._mats.deco);
-          bgMesh.scale.set(120 + Math.random() * 150, 80 + Math.random() * 200, 120 + Math.random() * 150);
-          bgMesh.position.set(x + Math.random() * 150, 40, side * (1600 + Math.random() * 300));
-          this.scene.add(bgMesh);
-          this.decorations.push(bgMesh);
+
+      // Props (biome-driven)
+      this._spawnProps(x, zRange);
+
+      // Hazard zones (lava/water pools)
+      if (Math.random() > 0.85) {
+        const hw = 60 + Math.random() * 80;
+        const hd = 60 + Math.random() * 80;
+        this.addHazard(x + Math.random() * 200, 1, z() * 0.5, hw, hd);
+      }
+
+      // Pickups
+      const pickupTypes = Object.keys(cfg.pickups || {});
+      if (pickupTypes.length > 0) {
+        for (const pType of pickupTypes) {
+          const pCfg = cfg.pickups[pType];
+          if (Math.random() < (pCfg.spawnChance || 0.1)) {
+            this.addPickup(x + Math.random() * 250, 20, z() * 0.6, pType);
+          }
         }
       }
+
+      // Enemies
       const enemyCount = 1 + Math.floor(Math.random() * 2);
       for (let i = 0; i < enemyCount; i++) {
         if (Math.random() > 0.2) spawnEnemyCb(x + Math.random() * 250, 50, z());
@@ -1417,6 +1700,18 @@ class WorldManager {
       if (this.decorations[i].position.x < limitX) {
         this.scene.remove(this.decorations[i]);
         this.decorations.splice(i, 1);
+      }
+    }
+    for (let i = this.pickups.length - 1; i >= 0; i--) {
+      if (this.pickups[i].x < limitX || this.pickups[i].collected) {
+        this.scene.remove(this.pickups[i].mesh);
+        this.pickups.splice(i, 1);
+      }
+    }
+    for (let i = this.hazards.length - 1; i >= 0; i--) {
+      if (this.hazards[i].x < limitX) {
+        this.scene.remove(this.hazards[i].mesh);
+        this.hazards.splice(i, 1);
       }
     }
   }
@@ -1623,10 +1918,13 @@ class GameEngine {
     this._gameoverHighscore = document.getElementById('gameover-highscore');
     this._pauseOverlay = document.getElementById('pause-overlay');
 
+    this._editorScreen = document.getElementById('editor-screen');
+
     this._setupEvents();
     this._setupMenu();
     this._setupStateEvents();
     this._setupConfigLoader();
+    this._setupEditor();
     SaveManager.updateMenuCards();
     this._showState(STATES.MENU);
   }
@@ -1694,6 +1992,62 @@ class GameEngine {
       };
       reader.readAsText(file);
       fileInput.value = '';
+    });
+  }
+
+  _setupEditor() {
+    document.getElementById('btn-editor').addEventListener('click', () => {
+      this._menuScreen.classList.add('hidden');
+      this._editorScreen.style.display = 'block';
+    });
+    document.getElementById('btn-editor-back').addEventListener('click', () => {
+      this._editorScreen.style.display = 'none';
+      this._menuScreen.classList.remove('hidden');
+    });
+    document.getElementById('btn-export-config').addEventListener('click', () => {
+      const json = GameConfig.export();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'engin-config.json'; a.click();
+      URL.revokeObjectURL(url);
+    });
+    document.getElementById('btn-apply-editor').addEventListener('click', () => {
+      const cfg = {
+        theme: {
+          primary: document.getElementById('ed-theme-primary').value,
+          primaryHover: document.getElementById('ed-theme-primary').value,
+          background: document.getElementById('ed-theme-bg').value,
+          ground: document.getElementById('ed-theme-ground').value,
+        },
+        player: {
+          palette: {
+            jacket: document.getElementById('ed-player-jacket').value,
+            pants: document.getElementById('ed-player-pants').value,
+            hair: document.getElementById('ed-player-hair').value,
+            skin: document.getElementById('ed-player-skin').value,
+          }
+        },
+        enemies: {
+          grunt: { hp: parseInt(document.getElementById('ed-grunt-hp').value) || 50 },
+          heavy: { hp: parseInt(document.getElementById('ed-heavy-hp').value) || 120 },
+          boss: { hp: parseInt(document.getElementById('ed-boss-hp').value) || 500 },
+        },
+        pickups: {
+          health: {
+            heal: parseInt(document.getElementById('ed-pickup-heal').value) || 30,
+            spawnChance: (parseInt(document.getElementById('ed-pickup-health-chance').value) || 15) / 100,
+          },
+          speed: {
+            boost: (parseInt(document.getElementById('ed-pickup-speed-boost').value) || 200) / 100,
+          },
+        }
+      };
+      GameConfig.load(cfg);
+      GameConfig.applyTheme(cfg.theme);
+      this._editorScreen.style.display = 'none';
+      this._menuScreen.classList.remove('hidden');
+      this.ui.showNotification('CONFIG APLICADA');
     });
   }
 
@@ -1868,7 +2222,7 @@ class GameEngine {
       for (let i = 0; i < chunkCount; i++) {
         this.world.generateChunk((x, y, z) => {
           if (!cfg.hasWaves) this._spawnEnemyFromChunk(x, y, z);
-        }, cfg.autoRun);
+        }, cfg.autoRun, this.sceneManager);
       }
     }
   }
@@ -1934,6 +2288,36 @@ class GameEngine {
       p.active = true;
       this.sceneManager.add(p.mesh);
       this.particles.push(p);
+    }
+  }
+
+  scene_remove_pickup(pk) {
+    this.sceneManager.remove(pk.mesh);
+    this.spawnParticles(pk.mesh.position, { count: 8, spread: 6, gravity: -0.15, life: 20, color: pk.config.color });
+    this.audio.levelUp();
+  }
+
+  _applyPickup(type, config) {
+    const p = this.player;
+    switch (type) {
+      case 'health':
+        p.health = Math.min(p.health + (config.heal || 30), p.maxHealth);
+        this.ui.showNotification('+ VIDA');
+        break;
+      case 'speed':
+        const prevSpd = p.baseSpeed;
+        p.baseSpeed *= (config.boost || 1.5);
+        this.ui.showNotification('VELOCIDAD!');
+        setTimeout(() => { p.baseSpeed = prevSpd; }, (config.duration || 300) * 16.667);
+        break;
+      case 'damage':
+        const prevDmg = p.baseDmg;
+        p.baseDmg = Math.floor(p.baseDmg * (config.boost || 1.5));
+        this.ui.showNotification('DANO+!');
+        setTimeout(() => { p.baseDmg = prevDmg; }, (config.duration || 300) * 16.667);
+        break;
+      default:
+        this.ui.showNotification(`PICKUP: ${type}`);
     }
   }
 
@@ -2026,10 +2410,10 @@ class GameEngine {
     // 2b. Camera shake
     this.cameraShake.update(cam);
 
-    // 3. World generation
+    // 3. World generation (pass sceneManager for biome color transitions)
     if (cfg.worldMode === 'infinite') {
       if (this.player.mesh.position.x > this.world.lastX - 1500) {
-        this.world.generateChunk((x, y, z) => this._spawnEnemyFromChunk(x, y, z), cfg.autoRun);
+        this.world.generateChunk((x, y, z) => this._spawnEnemyFromChunk(x, y, z), cfg.autoRun, this.sceneManager);
       }
       this.world.cleanUp(this.player.mesh.position.x - 1200);
     }
@@ -2129,6 +2513,33 @@ class GameEngine {
         this.sceneManager.remove(p.mesh);
         this.particlePool.release(p);
         this.particles.splice(i, 1);
+      }
+    }
+
+    // 6b. Pickups — animate + collision
+    const pp = this.player.mesh.position;
+    for (let i = this.world.pickups.length - 1; i >= 0; i--) {
+      const pk = this.world.pickups[i];
+      if (pk.collected) continue;
+      // Float animation
+      pk.mesh.position.y = pk.y + Math.sin(time * 3 + pk.x) * 5;
+      pk.mesh.rotation.y += 0.03 * dt;
+      // Collect check
+      const dist = Math.hypot(pp.x - pk.x, pp.z - pk.z);
+      if (dist < 40 && Math.abs(pp.y - pk.y) < 30) {
+        pk.collected = true;
+        this.scene_remove_pickup(pk);
+        this._applyPickup(pk.type, pk.config);
+      }
+    }
+
+    // 6c. Hazards — damage on contact
+    for (const hz of this.world.hazards) {
+      if (this.physics.checkAABB(pp.x, pp.y, pp.z, 20, 40, 20, hz.x, hz.y, hz.z, hz.w, hz.h, hz.d)) {
+        if (this.player.takeDamage(0.3 * dt)) {
+          this._gameOver();
+        }
+        this.cameraShake.trigger(1);
       }
     }
 
