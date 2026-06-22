@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ENGIN — Pixel Iso Engine v2.0</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { overflow: hidden; background: #0a0506; font-family: 'Courier New', monospace; }
+  canvas { display: block; }
+
+  #ui {
+    position: absolute; top: 20px; left: 20px; color: #fff; z-index: 10;
+    text-shadow: 2px 2px 4px black; pointer-events: none; font-size: 16px;
+    line-height: 1.6;
+  }
+  #crosshair {
+    position: absolute; width: 24px; height: 24px; pointer-events: none; z-index: 10;
+    transform: translate(-50%, -50%);
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: rgba(255,45,77,0.8);
+  }
+  #crosshair::before { width: 2px; height: 100%; left: 50%; transform: translateX(-50%); }
+  #crosshair::after { width: 100%; height: 2px; top: 50%; transform: translateY(-50%); }
+
+  #config-panel {
+    position: absolute; top: 20px; right: 20px; background: rgba(10,5,6,0.92);
+    padding: 16px; border-radius: 6px; border: 1px solid #ff2d4d; color: #eee; z-index: 10;
+    font-size: 13px; min-width: 200px; backdrop-filter: blur(4px);
+  }
+  #config-panel h3 { color: #ff2d4d; margin-bottom: 10px; font-size: 14px; letter-spacing: 2px; }
+  #config-panel label { display: block; margin-top: 8px; color: #aaa; }
+  #config-panel input[type="range"] { width: 100%; margin-top: 4px; accent-color: #ff2d4d; }
+  #config-panel button {
+    margin-top: 12px; padding: 8px 12px; background: #ff2d4d; color: #fff;
+    border: none; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold;
+    font-family: inherit; letter-spacing: 1px; transition: background 0.2s;
+  }
+  #config-panel button:hover { background: #cc1a35; }
+
+  #bars { margin-top: 8px; }
+  .bar-container {
+    width: 180px; height: 12px; background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; overflow: hidden;
+    margin-top: 4px;
+  }
+  #health-bar { height: 100%; width: 100%; background: linear-gradient(90deg, #e53935, #ff5252); transition: width 0.2s; }
+  #xp-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #00e676, #76ff03); transition: width 0.3s ease-out; }
+
+  #powerup-notif {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 36px; color: #ffeb3b; font-weight: bold; text-align: center;
+    text-shadow: 0 0 20px #ff0000, 0 0 40px #ff000066; opacity: 0; pointer-events: none;
+    transition: opacity 0.4s; z-index: 20; letter-spacing: 2px;
+  }
+  #kill-feed {
+    position: absolute; bottom: 20px; left: 20px; color: #ccc; font-size: 12px;
+    z-index: 10; pointer-events: none; max-height: 120px; overflow: hidden;
+  }
+  #kill-feed div { margin-bottom: 3px; opacity: 0.8; }
+  #fps { position: absolute; bottom: 20px; right: 20px; color: #666; font-size: 11px; z-index: 10; pointer-events: none; }
+  #weapon-slots {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; z-index: 10; pointer-events: none;
+  }
+  .weapon-slot {
+    width: 50px; height: 50px; background: rgba(10,5,6,0.8); border: 2px solid #444;
+    border-radius: 6px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; font-size: 10px; color: #aaa; transition: all 0.2s;
+  }
+  .weapon-slot.active { border-color: #ff2d4d; color: #fff; background: rgba(255,45,77,0.2); }
+  .weapon-slot .key { font-size: 8px; color: #666; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <div>❤️ <span id="health">100</span>/<span id="max-health">100</span></div>
+  <div id="bars">
+    <div class="bar-container"><div id="health-bar"></div></div>
+    <div class="bar-container" style="margin-top:6px"><div id="xp-bar"></div></div>
+  </div>
+  <div style="margin-top:6px">⭐ LVL <span id="level">1</span> &nbsp; 💀 <span id="score">0</span></div>
+</div>
+
+<div id="config-panel">
+  <h3>⚙ ENGINE</h3>
+  <label>Luz: <span id="light-val">2.0</span></label>
+  <input type="range" id="light-slider" min="0" max="4" step="0.1" value="2.0">
+  <label>FOV: <span id="fov-val">300</span></label>
+  <input type="range" id="fov-slider" min="150" max="500" step="10" value="300">
+  <button id="regen-btn">⟳ REINICIAR</button>
+</div>
+
+<div id="weapon-slots">
+  <div class="weapon-slot active" id="ws-1"><span>🔫</span><span class="key">[1]</span></div>
+  <div class="weapon-slot" id="ws-2"><span>💥</span><span class="key">[2]</span></div>
+  <div class="weapon-slot" id="ws-3"><span>⚡</span><span class="key">[3]</span></div>
+  <div class="weapon-slot" id="ws-4"><span>🚀</span><span class="key">[4]</span></div>
+</div>
+
+<div id="powerup-notif"></div>
+<div id="kill-feed"></div>
+<div id="fps">-- FPS</div>
+<div id="crosshair"></div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ═══════════════════════════════════════════════════════════
+// 1. OBJECT POOL — Elimina garbage collection spikes
+// ═══════════════════════════════════════════════════════════
+
+class ObjectPool {
+  constructor(factory, initialSize = 50) {
+    this.factory = factory;
+    this.pool = [];
+    this.active = [];
+    for (let i = 0; i < initialSize; i++) this.pool.push(this.factory());
+  }
+
+  acquire() {
+    const obj = this.pool.length > 0 ? this.pool.pop() : this.factory();
+    this.active.push(obj);
+    return obj;
+  }
+
+  release(obj) {
+    const idx = this.active.indexOf(obj);
+    if (idx !== -1) {
+      this.active.splice(idx, 1);
+      this.pool.push(obj);
+    }
+  }
+
+  releaseAll() {
+    while (this.active.length > 0) {
+      this.pool.push(this.active.pop());
+    }
+  }
+
+  get activeCount() { return this.active.length; }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2. SCENE MANAGER — Three.js wrapper
+// ═══════════════════════════════════════════════════════════
+
+class SceneManager {
+  constructor() {
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x1a0a10);
+    this.scene.fog = new THREE.FogExp2(0x1a0a10, 0.0008);
+
+    this.viewSize = 300;
+    const aspect = window.innerWidth / window.innerHeight;
+    this.camera = new THREE.OrthographicCamera(
+      -this.viewSize * aspect, this.viewSize * aspect,
+      this.viewSize, -this.viewSize, 1, 5000
+    );
+    this.camera.position.set(500, 500, 500);
+    this.camera.lookAt(0, 0, 0);
+
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(this.renderer.domElement);
+
+    this.ambientLight = new THREE.AmbientLight(0xffeedd, 2.0);
+    this.scene.add(this.ambientLight);
+
+    this.dirLight = new THREE.DirectionalLight(0xffccaa, 1.5);
+    this.dirLight.position.set(200, 400, 100);
+    this.scene.add(this.dirLight);
+
+    this.rimLight = new THREE.DirectionalLight(0x4488ff, 0.4);
+    this.rimLight.position.set(-100, 200, -200);
+    this.scene.add(this.rimLight);
+  }
+
+  add(obj) { this.scene.add(obj); }
+  remove(obj) { this.scene.remove(obj); }
+  render() { this.renderer.render(this.scene, this.camera); }
+
+  setViewSize(size) {
+    this.viewSize = size;
+    this.resize();
+  }
+
+  resize() {
+    const aspect = window.innerWidth / window.innerHeight;
+    this.camera.left = -this.viewSize * aspect;
+    this.camera.right = this.viewSize * aspect;
+    this.camera.top = this.viewSize;
+    this.camera.bottom = -this.viewSize;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 3. INPUT MANAGER — Teclado + Mouse + Raycasting
+// ═══════════════════════════════════════════════════════════
+
+class InputManager {
+  constructor(camera) {
+    this.keys = {};
+    this.mouse = { x: 0, y: 0, down: false };
+    this.raycaster = new THREE.Raycaster();
+    this.mouseNDC = new THREE.Vector2();
+    this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    this.camera = camera;
+    this._aimTarget = new THREE.Vector3();
+
+    window.addEventListener('keydown', e => { this.keys[e.key.toLowerCase()] = true; e.preventDefault(); });
+    window.addEventListener('keyup', e => { this.keys[e.key.toLowerCase()] = false; });
+
+    window.addEventListener('mousemove', e => {
+      this.mouse.x = e.clientX;
+      this.mouse.y = e.clientY;
+      this.mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+      this.mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      const ch = document.getElementById('crosshair');
+      ch.style.left = e.clientX + 'px';
+      ch.style.top = e.clientY + 'px';
+    });
+    window.addEventListener('mousedown', () => this.mouse.down = true);
+    window.addEventListener('mouseup', () => this.mouse.down = false);
+    window.addEventListener('contextmenu', e => e.preventDefault());
+  }
+
+  getAimAngle(playerPos) {
+    this.raycaster.setFromCamera(this.mouseNDC, this.camera);
+    if (this.raycaster.ray.intersectPlane(this.groundPlane, this._aimTarget)) {
+      return Math.atan2(this._aimTarget.x - playerPos.x, this._aimTarget.z - playerPos.z);
+    }
+    return 0;
+  }
+
+  isMoving() {
+    return this.keys['w'] || this.keys['a'] || this.keys['s'] || this.keys['d'];
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 4. PHYSICS MANAGER — AABB 3D + Gravity
+// ═══════════════════════════════════════════════════════════
+
+class PhysicsManager {
+  constructor() {
+    this.gravity = 0.65;
+  }
+
+  checkAABB(ax, ay, az, aw, ah, ad, bx, by, bz, bw, bh, bd) {
+    return Math.abs(ax - bx) < (aw + bw) * 0.5 &&
+           Math.abs(ay - by) < (ah + bh) * 0.5 &&
+           Math.abs(az - bz) < (ad + bd) * 0.5;
+  }
+
+  resolveMovement(entity, hw, hh, hd, platforms, dt) {
+    const pos = entity.mesh.position;
+    const vel = entity.vel;
+
+    // X axis
+    pos.x += vel.x * dt;
+    for (const p of platforms) {
+      if (this.checkAABB(pos.x, pos.y, pos.z, hw, hh, hd, p.x, p.y, p.z, p.w, p.h, p.d)) {
+        pos.x = vel.x > 0 ? p.x - (p.w + hw) * 0.5 : p.x + (p.w + hw) * 0.5;
+        vel.x = 0;
+      }
+    }
+
+    // Z axis
+    pos.z += vel.z * dt;
+    for (const p of platforms) {
+      if (this.checkAABB(pos.x, pos.y, pos.z, hw, hh, hd, p.x, p.y, p.z, p.w, p.h, p.d)) {
+        pos.z = vel.z > 0 ? p.z - (p.d + hd) * 0.5 : p.z + (p.d + hd) * 0.5;
+        vel.z = 0;
+      }
+    }
+
+    // Y axis (gravity)
+    vel.y -= this.gravity * dt;
+    pos.y += vel.y * dt;
+    entity.onGround = false;
+    for (const p of platforms) {
+      if (this.checkAABB(pos.x, pos.y, pos.z, hw, hh, hd, p.x, p.y, p.z, p.w, p.h, p.d)) {
+        if (vel.y < 0) { pos.y = p.y + (p.h + hh) * 0.5; entity.onGround = true; }
+        else { pos.y = p.y - (p.h + hh) * 0.5; }
+        vel.y = 0;
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 5. ENTITY FACTORY — Voxel character builder
+// ═══════════════════════════════════════════════════════════
+
+class EntityFactory {
+  static _boxGeo = new THREE.BoxGeometry(1, 1, 1);
+
+  static createCharacter(palette, scale = 1) {
+    const group = new THREE.Group();
+    const mat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.1 });
+    const box = (w, h, d, color, x, y, z) => {
+      const m = new THREE.Mesh(EntityFactory._boxGeo, mat(color));
+      m.scale.set(w, h, d);
+      m.position.set(x, y, z);
+      group.add(m);
+      return m;
+    };
+
+    const parts = {};
+    // Feet
+    parts.shoeL = box(8, 4, 9, palette.shoes, -4, -18, 2);
+    parts.shoeR = box(8, 4, 9, palette.shoes, 4, -18, 2);
+    // Legs
+    parts.legL = box(6, 12, 6, palette.pants, -4, -10, 0);
+    parts.legR = box(6, 12, 6, palette.pants, 4, -10, 0);
+    // Body
+    parts.torso = box(16, 8, 8, palette.jacket, 0, 0, 0);
+    box(16, 4, 8, palette.shirt, 0, -5, 0);
+    // Arms
+    parts.armL = box(4, 14, 4, palette.jacket, -10, 2, 0);
+    parts.armR = box(4, 14, 4, palette.jacket, 10, 2, 0);
+    // Head
+    parts.head = box(9, 9, 9, palette.skin, 0, 9, 0);
+    parts.hair = box(10, 4, 10, palette.hair, 0, 13, 0);
+    // Weapon
+    parts.weapon = box(2, 2, 22, palette.weapon, 10, 0, 12);
+
+    group.scale.setScalar(scale);
+    group.userData.parts = parts;
+    return group;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 6. BASE ENTITY + PLAYER + ENEMY
+// ═══════════════════════════════════════════════════════════
+
+class Entity {
+  constructor(mesh) {
+    this.mesh = mesh;
+    this.vel = new THREE.Vector3();
+    this.onGround = false;
+    this.health = 100;
+    this.maxHealth = 100;
+  }
+
+  animate(moving, jumping, time, speed) {
+    const p = this.mesh.userData.parts;
+    if (!p) return;
+
+    if (jumping) {
+      p.legL.rotation.x = -0.5;
+      p.legR.rotation.x = -0.5;
+      p.armL.rotation.x = -2.2;
+      p.armR.rotation.x = -2.2;
+    } else if (moving) {
+      const wave = Math.sin(time * speed * 2) * 0.7;
+      p.legL.rotation.x = wave;
+      p.legR.rotation.x = -wave;
+      p.armL.rotation.x = -wave * 0.6;
+      p.armR.rotation.x = wave * 0.3;
+      p.torso.position.y = Math.abs(Math.sin(time * speed * 4)) * 1.2;
+    } else {
+      // Idle breathing
+      const breath = Math.sin(time * 2) * 0.02;
+      p.legL.rotation.x *= 0.85;
+      p.legR.rotation.x *= 0.85;
+      p.armL.rotation.x *= 0.85;
+      p.armR.rotation.x *= 0.85;
+      p.torso.position.y = breath * 10;
+    }
+  }
+
+  takeDamage(dmg) {
+    this.health -= dmg;
+    return this.health <= 0;
+  }
+}
+
+class Player extends Entity {
+  constructor() {
+    const palette = {
+      skin: 0xf1c27d, hair: 0x4e342e, jacket: 0xfdd835,
+      shirt: 0xc62828, pants: 0x1a237e, shoes: 0x3e2723, weapon: 0x5d4037
+    };
+    super(EntityFactory.createCharacter(palette));
+    this.maxHealth = 100;
+    this.health = 100;
+    this.weapon = 'pistol';
+    this.cooldown = 0;
+
+    // RPG
+    this.xp = 0;
+    this.level = 1;
+    this.xpToNext = 100;
+    this.baseSpeed = 4.5;
+    this.baseDmg = 25;
+    this.fireRateMult = 1;
+    this.kills = 0;
+  }
+
+  update(dt, time, input, physics, platforms, engine) {
+    this.vel.x = 0;
+    this.vel.z = 0;
+    const spd = this.baseSpeed;
+    if (input.keys['a']) this.vel.x = -spd;
+    if (input.keys['d']) this.vel.x = spd;
+    if (input.keys['w']) this.vel.z = -spd;
+    if (input.keys['s']) this.vel.z = spd;
+
+    // Diagonal normalization
+    if (this.vel.x !== 0 && this.vel.z !== 0) {
+      this.vel.x *= 0.707;
+      this.vel.z *= 0.707;
+    }
+
+    if (input.keys[' '] && this.onGround) {
+      this.vel.y = 13;
+      this.onGround = false;
+    }
+
+    this.mesh.rotation.y = input.getAimAngle(this.mesh.position);
+
+    if (input.mouse.down && this.cooldown <= 0) this.shoot(engine);
+    this.cooldown -= dt;
+
+    physics.resolveMovement(this, 20, 40, 20, platforms, dt);
+
+    const moving = input.isMoving() && this.onGround;
+    this.animate(moving, !this.onGround, time, spd);
+  }
+
+  shoot(engine) {
+    const angle = this.mesh.rotation.y;
+    const weapons = {
+      pistol:   { speed: 16, dmg: 1.0, count: 1, spread: 0.03, cd: 10, color: 0xffeb3b },
+      shotgun:  { speed: 13, dmg: 0.5, count: 7, spread: 0.28, cd: 28, color: 0xff9800 },
+      chaingun: { speed: 20, dmg: 0.4, count: 1, spread: 0.12, cd: 3,  color: 0x76ff03 },
+      rpg:      { speed: 9,  dmg: 4.0, count: 1, spread: 0.0,  cd: 50, color: 0xff1744 }
+    };
+    const w = weapons[this.weapon];
+    const dmg = Math.floor(this.baseDmg * w.dmg);
+
+    for (let i = 0; i < w.count; i++) {
+      const a = angle + (Math.random() - 0.5) * w.spread;
+      engine.spawnBullet(this.mesh.position, a, w.speed, dmg, 'player', w.color, 80);
+    }
+    this.cooldown = w.cd * this.fireRateMult;
+  }
+
+  gainXP(amount, ui) {
+    this.xp += amount;
+    while (this.xp >= this.xpToNext) {
+      this.xp -= this.xpToNext;
+      this.level++;
+      this.xpToNext = Math.floor(this.xpToNext * 1.4);
+      this.grantPowerUp(ui);
+    }
+  }
+
+  grantPowerUp(ui) {
+    const powerUps = [
+      { name: '⚡ VELOCIDAD +', apply: () => this.baseSpeed += 0.4 },
+      { name: '🗡️ DAÑO +', apply: () => this.baseDmg += 5 },
+      { name: '❤️ VIDA MAX +', apply: () => { this.maxHealth += 20; this.health = this.maxHealth; } },
+      { name: '🔥 CADENCIA +', apply: () => this.fireRateMult = Math.max(0.3, this.fireRateMult * 0.88) },
+      { name: '🛡️ REGEN', apply: () => { this.health = Math.min(this.health + 30, this.maxHealth); } }
+    ];
+    const pu = powerUps[Math.floor(Math.random() * powerUps.length)];
+    pu.apply();
+    ui.showNotification(`NIVEL ${this.level}\n${pu.name}`);
+  }
+
+  die() {
+    this.health = this.maxHealth;
+    this.xp = 0;
+    this.level = 1;
+    this.xpToNext = 100;
+    this.baseSpeed = 4.5;
+    this.baseDmg = 25;
+    this.maxHealth = 100;
+    this.fireRateMult = 1;
+    this.mesh.position.set(0, 100, 0);
+    this.vel.set(0, 0, 0);
+  }
+}
+
+class Enemy extends Entity {
+  constructor(mesh, type = 'grunt') {
+    super(mesh);
+    this.type = type;
+    this.cooldown = 60 + Math.random() * 40;
+    this.health = type === 'heavy' ? 120 : 50;
+    this.maxHealth = this.health;
+    this.speed = type === 'heavy' ? 1.0 : 1.8;
+    this.dmg = type === 'heavy' ? 18 : 8;
+  }
+
+  update(dt, time, player, physics, platforms, engine) {
+    const dx = player.mesh.position.x - this.mesh.position.x;
+    const dz = player.mesh.position.z - this.mesh.position.z;
+    const dist = Math.hypot(dx, dz);
+
+    if (dist > 50) {
+      this.vel.x = (dx / dist) * this.speed;
+      this.vel.z = (dz / dist) * this.speed;
+    } else {
+      this.vel.x = 0;
+      this.vel.z = 0;
+    }
+
+    physics.resolveMovement(this, 22, 36, 22, platforms, dt);
+    this.mesh.rotation.y = Math.atan2(dx, dz);
+
+    const moving = (this.vel.x !== 0 || this.vel.z !== 0) && this.onGround;
+    this.animate(moving, !this.onGround, time, this.speed);
+
+    this.cooldown -= dt;
+    if (this.cooldown <= 0 && dist < 500) {
+      engine.spawnBullet(this.mesh.position, this.mesh.rotation.y, 10, this.dmg, 'enemy', 0xff5500, 90);
+      this.cooldown = this.type === 'heavy' ? 60 : 80 + Math.random() * 30;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 7. WORLD MANAGER — Procedural infinite terrain
+// ═══════════════════════════════════════════════════════════
+
+class WorldManager {
+  constructor(scene) {
+    this.scene = scene;
+    this.platforms = [];
+    this.decorations = [];
+    this.lastX = 0;
+
+    this._platGeo = new THREE.BoxGeometry(1, 1, 1);
+    this._mats = {
+      ground: new THREE.MeshStandardMaterial({ color: 0x3d2b2b, roughness: 0.9 }),
+      platform: new THREE.MeshStandardMaterial({ color: 0x5a4a44, roughness: 0.8 }),
+      wall: new THREE.MeshStandardMaterial({ color: 0x7a4a40, roughness: 0.7 }),
+      deco: new THREE.MeshStandardMaterial({ color: 0x0a0305, roughness: 1 }),
+      invisible: new THREE.MeshBasicMaterial({ visible: false })
+    };
+  }
+
+  addPlatform(x, y, z, w, h, d, type, isBase = false, invisible = false) {
+    const mat = invisible ? this._mats.invisible : (this._mats[type] || this._mats.platform);
+    const mesh = new THREE.Mesh(this._platGeo, mat);
+    mesh.scale.set(w, h, d);
+    mesh.position.set(x, y, z);
+    this.scene.add(mesh);
+    this.platforms.push({ mesh, x, y, z, w, h, d, type, isBase, invisible });
+  }
+
+  initWorld() {
+    this.platforms.forEach(p => this.scene.remove(p.mesh));
+    this.decorations.forEach(d => this.scene.remove(d));
+    this.platforms.length = 0;
+    this.decorations.length = 0;
+    this.lastX = 0;
+
+    // Infinite ground
+    this.addPlatform(50000, -20, 0, 100000, 20, 1000, 'ground', true);
+    // Side walls (invisible)
+    this.addPlatform(50000, 150, 450, 100000, 500, 10, 'wall', true, true);
+    this.addPlatform(50000, 150, -450, 100000, 500, 10, 'wall', true, true);
+  }
+
+  generateChunk(spawnEnemyCb) {
+    const x = this.lastX + 350;
+    const z = () => (Math.random() - 0.5) * 700;
+
+    // Plataformas elevadas
+    if (Math.random() > 0.35) {
+      this.addPlatform(x, 20 + Math.random() * 50, z(), 80 + Math.random() * 120, 18, 80 + Math.random() * 120, 'platform');
+    }
+    // Muros/cover
+    if (Math.random() > 0.55) {
+      this.addPlatform(x + 100, 40, z(), 30, 80, 30, 'wall');
+    }
+    // Decoración de fondo
+    const bgMesh = new THREE.Mesh(this._platGeo, this._mats.deco);
+    bgMesh.scale.set(150, 100 + Math.random() * 200, 150);
+    bgMesh.position.set(x, 50, -600 - Math.random() * 200);
+    this.scene.add(bgMesh);
+    this.decorations.push(bgMesh);
+
+    // Enemies
+    const enemyCount = Math.random() > 0.5 ? 2 : 1;
+    for (let i = 0; i < enemyCount; i++) {
+      if (Math.random() > 0.25) spawnEnemyCb(x + Math.random() * 200, 100, z());
+    }
+
+    this.lastX = x;
+  }
+
+  cleanUp(limitX) {
+    for (let i = this.platforms.length - 1; i >= 0; i--) {
+      if (!this.platforms[i].isBase && this.platforms[i].x < limitX) {
+        this.scene.remove(this.platforms[i].mesh);
+        this.platforms.splice(i, 1);
+      }
+    }
+    for (let i = this.decorations.length - 1; i >= 0; i--) {
+      if (this.decorations[i].position.x < limitX) {
+        this.scene.remove(this.decorations[i]);
+        this.decorations.splice(i, 1);
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 8. UI MANAGER
+// ═══════════════════════════════════════════════════════════
+
+class UIManager {
+  constructor() {
+    this.els = {
+      health: document.getElementById('health'),
+      maxHealth: document.getElementById('max-health'),
+      healthBar: document.getElementById('health-bar'),
+      score: document.getElementById('score'),
+      level: document.getElementById('level'),
+      xpBar: document.getElementById('xp-bar'),
+      notif: document.getElementById('powerup-notif'),
+      killFeed: document.getElementById('kill-feed'),
+      fps: document.getElementById('fps')
+    };
+    this.weaponSlots = [
+      document.getElementById('ws-1'),
+      document.getElementById('ws-2'),
+      document.getElementById('ws-3'),
+      document.getElementById('ws-4')
+    ];
+  }
+
+  update(player) {
+    const h = Math.max(0, Math.floor(player.health));
+    this.els.health.textContent = h;
+    this.els.maxHealth.textContent = player.maxHealth;
+    this.els.healthBar.style.width = ((h / player.maxHealth) * 100) + '%';
+    this.els.score.textContent = player.kills;
+    this.els.level.textContent = player.level;
+    this.els.xpBar.style.width = ((player.xp / player.xpToNext) * 100) + '%';
+  }
+
+  setWeapon(index) {
+    this.weaponSlots.forEach((s, i) => s.classList.toggle('active', i === index));
+  }
+
+  showNotification(text) {
+    this.els.notif.textContent = text;
+    this.els.notif.style.opacity = '1';
+    setTimeout(() => { this.els.notif.style.opacity = '0'; }, 1800);
+  }
+
+  addKill(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    this.els.killFeed.prepend(div);
+    if (this.els.killFeed.children.length > 5) this.els.killFeed.lastChild.remove();
+    setTimeout(() => div.remove(), 4000);
+  }
+
+  updateFPS(fps) {
+    this.els.fps.textContent = fps + ' FPS';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 9. GAME ENGINE — Main loop orchestrator
+// ═══════════════════════════════════════════════════════════
+
+class GameEngine {
+  constructor() {
+    this.sceneManager = new SceneManager();
+    this.input = new InputManager(this.sceneManager.camera);
+    this.physics = new PhysicsManager();
+    this.ui = new UIManager();
+    this.world = new WorldManager(this.sceneManager.scene);
+
+    this.player = new Player();
+    this.sceneManager.add(this.player.mesh);
+
+    this.enemies = [];
+    this.bullets = [];
+    this.particles = [];
+
+    // Object pools
+    const bulletGeo = new THREE.SphereGeometry(4, 6, 6);
+    const particleGeo = new THREE.BoxGeometry(3, 3, 3);
+    this._bulletGeo = bulletGeo;
+    this._particleGeo = particleGeo;
+    this._bulletMats = {
+      player: new THREE.MeshBasicMaterial({ color: 0xffeb3b }),
+      enemy: new THREE.MeshBasicMaterial({ color: 0xff5500 })
+    };
+    this._bloodMat = new THREE.MeshBasicMaterial({ color: 0xaa0000 });
+
+    this.bulletPool = new ObjectPool(() => ({
+      mesh: new THREE.Mesh(bulletGeo, this._bulletMats.player),
+      vx: 0, vz: 0, dmg: 0, owner: 'player', life: 0, active: false
+    }), 100);
+
+    this.particlePool = new ObjectPool(() => ({
+      mesh: new THREE.Mesh(particleGeo, this._bloodMat),
+      vel: new THREE.Vector3(), life: 0, active: false
+    }), 80);
+
+    // Player glow
+    this.playerLight = new THREE.PointLight(0xff2244, 0.8, 400);
+    this.sceneManager.add(this.playerLight);
+
+    // Timing
+    this.lastTime = performance.now();
+    this.frameCount = 0;
+    this.fpsTime = 0;
+    this.fps = 60;
+
+    this._setupEvents();
+  }
+
+  _setupEvents() {
+    window.addEventListener('keydown', e => {
+      const weapons = ['pistol', 'shotgun', 'chaingun', 'rpg'];
+      const idx = parseInt(e.key) - 1;
+      if (idx >= 0 && idx < 4) {
+        this.player.weapon = weapons[idx];
+        this.ui.setWeapon(idx);
+      }
+    });
+
+    document.getElementById('light-slider').addEventListener('input', e => {
+      const val = parseFloat(e.target.value);
+      this.sceneManager.ambientLight.intensity = val;
+      document.getElementById('light-val').textContent = val.toFixed(1);
+    });
+
+    document.getElementById('fov-slider').addEventListener('input', e => {
+      const val = parseInt(e.target.value);
+      this.sceneManager.setViewSize(val);
+      document.getElementById('fov-val').textContent = val;
+    });
+
+    document.getElementById('regen-btn').addEventListener('click', () => this.init());
+    window.addEventListener('resize', () => this.sceneManager.resize());
+  }
+
+  spawnBullet(origin, angle, speed, dmg, owner, color, life) {
+    const b = this.bulletPool.acquire();
+    b.mesh.material = owner === 'player' ? this._bulletMats.player : this._bulletMats.enemy;
+    b.mesh.position.copy(origin);
+    b.mesh.position.y += 10;
+    b.vx = Math.sin(angle) * speed;
+    b.vz = Math.cos(angle) * speed;
+    b.dmg = dmg;
+    b.owner = owner;
+    b.life = life;
+    b.active = true;
+    this.sceneManager.add(b.mesh);
+    this.bullets.push(b);
+  }
+
+  spawnBlood(pos) {
+    for (let i = 0; i < 4; i++) {
+      const p = this.particlePool.acquire();
+      p.mesh.position.copy(pos);
+      p.vel.set((Math.random() - 0.5) * 8, Math.random() * 6, (Math.random() - 0.5) * 8);
+      p.life = 18;
+      p.active = true;
+      this.sceneManager.add(p.mesh);
+      this.particles.push(p);
+    }
+  }
+
+  spawnEnemy(x, y, z) {
+    const isHeavy = Math.random() > 0.75;
+    const palette = isHeavy
+      ? { skin: 0x8d6e63, hair: 0x1b1b1b, jacket: 0x880e4f, shirt: 0x4a0028, pants: 0x1a1a1a, shoes: 0x111111, weapon: 0x424242 }
+      : { skin: 0x9e9e9e, hair: 0x212121, jacket: 0x2e7d32, shirt: 0x1b5e20, pants: 0x263238, shoes: 0x111111, weapon: 0x546e7a };
+    const mesh = EntityFactory.createCharacter(palette, isHeavy ? 1.2 : 1.0);
+    mesh.position.set(x, y, z);
+    const enemy = new Enemy(mesh, isHeavy ? 'heavy' : 'grunt');
+    this.sceneManager.add(enemy.mesh);
+    this.enemies.push(enemy);
+  }
+
+  init() {
+    this.enemies.forEach(e => this.sceneManager.remove(e.mesh));
+    this.enemies.length = 0;
+    this.bullets.forEach(b => { this.sceneManager.remove(b.mesh); this.bulletPool.release(b); });
+    this.bullets.length = 0;
+    this.particles.forEach(p => { this.sceneManager.remove(p.mesh); this.particlePool.release(p); });
+    this.particles.length = 0;
+
+    this.world.initWorld();
+    this.player.mesh.position.set(0, 100, 0);
+    this.player.vel.set(0, 0, 0);
+    this.player.health = this.player.maxHealth;
+
+    for (let i = 0; i < 12; i++) {
+      this.world.generateChunk((x, y, z) => this.spawnEnemy(x, y, z));
+    }
+  }
+
+  loop() {
+    requestAnimationFrame(() => this.loop());
+
+    const now = performance.now();
+    const rawDt = (now - this.lastTime) / 16.667; // Normalize to ~60fps
+    const dt = Math.min(rawDt, 3); // Cap to prevent spiral of death
+    this.lastTime = now;
+
+    // FPS counter
+    this.frameCount++;
+    this.fpsTime += now - this.lastTime;
+    if (this.frameCount % 30 === 0) {
+      this.fps = Math.round(1000 / ((now - this._fpsStart) / 30));
+      this._fpsStart = now;
+      this.ui.updateFPS(this.fps);
+    }
+    if (!this._fpsStart) this._fpsStart = now;
+
+    const time = now * 0.001;
+
+    // === UPDATE PIPELINE ===
+
+    // 1. Player
+    this.player.update(dt, time, this.input, this.physics, this.world.platforms, this);
+
+    // 2. Camera follow (smooth)
+    const cam = this.sceneManager.camera;
+    const tx = this.player.mesh.position.x + 500;
+    const tz = this.player.mesh.position.z + 500;
+    cam.position.x += (tx - cam.position.x) * 0.08;
+    cam.position.z += (tz - cam.position.z) * 0.08;
+    cam.lookAt(this.player.mesh.position.x, 0, this.player.mesh.position.z);
+    this.playerLight.position.copy(this.player.mesh.position);
+    this.playerLight.position.y += 30;
+
+    // 3. World generation
+    if (this.player.mesh.position.x > this.world.lastX - 1500) {
+      this.world.generateChunk((x, y, z) => this.spawnEnemy(x, y, z));
+    }
+    this.world.cleanUp(this.player.mesh.position.x - 1200);
+
+    // 4. Enemies
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      e.update(dt, time, this.player, this.physics, this.world.platforms, this);
+      if (e.mesh.position.x < this.player.mesh.position.x - 1500) {
+        this.sceneManager.remove(e.mesh);
+        this.enemies.splice(i, 1);
+      }
+    }
+
+    // 5. Bullets
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      const b = this.bullets[i];
+      b.mesh.position.x += b.vx * dt;
+      b.mesh.position.z += b.vz * dt;
+      b.life -= dt;
+
+      let hit = false;
+
+      // Wall collision
+      for (const p of this.world.platforms) {
+        if (!p.invisible && this.physics.checkAABB(
+          b.mesh.position.x, b.mesh.position.y, b.mesh.position.z, 8, 8, 8,
+          p.x, p.y, p.z, p.w, p.h, p.d
+        )) { hit = true; break; }
+      }
+
+      if (!hit && b.owner === 'player') {
+        for (let j = this.enemies.length - 1; j >= 0; j--) {
+          const e = this.enemies[j];
+          const ep = e.mesh.position;
+          if (this.physics.checkAABB(
+            b.mesh.position.x, b.mesh.position.y, b.mesh.position.z, 8, 8, 8,
+            ep.x, ep.y, ep.z, 24, 36, 24
+          )) {
+            this.spawnBlood(b.mesh.position);
+            if (e.takeDamage(b.dmg)) {
+              this.sceneManager.remove(e.mesh);
+              this.enemies.splice(j, 1);
+              this.player.kills++;
+              this.player.gainXP(e.type === 'heavy' ? 80 : 40, this.ui);
+              this.ui.addKill(`💀 ${e.type === 'heavy' ? 'HEAVY' : 'GRUNT'} eliminado`);
+            }
+            hit = true;
+            break;
+          }
+        }
+      } else if (!hit && b.owner === 'enemy') {
+        const pp = this.player.mesh.position;
+        if (this.physics.checkAABB(
+          b.mesh.position.x, b.mesh.position.y, b.mesh.position.z, 8, 8, 8,
+          pp.x, pp.y, pp.z, 20, 40, 20
+        )) {
+          if (this.player.takeDamage(b.dmg)) {
+            this.player.die();
+            this.ui.showNotification('💀 MUERTO\nReiniciando...');
+          }
+          hit = true;
+        }
+      }
+
+      if (hit || b.life <= 0) {
+        this.sceneManager.remove(b.mesh);
+        this.bulletPool.release(b);
+        this.bullets.splice(i, 1);
+      }
+    }
+
+    // 6. Particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.mesh.position.add(p.vel.clone().multiplyScalar(dt));
+      p.vel.y -= 0.4 * dt;
+      p.life -= dt;
+      if (p.life <= 0) {
+        this.sceneManager.remove(p.mesh);
+        this.particlePool.release(p);
+        this.particles.splice(i, 1);
+      }
+    }
+
+    // 7. UI + Render
+    this.ui.update(this.player);
+    this.sceneManager.render();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 10. BOOTSTRAP
+// ═══════════════════════════════════════════════════════════
+
+const engine = new GameEngine();
+engine.init();
+engine.loop();
+
+</script>
+</body>
+</html>
