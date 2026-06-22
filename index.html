@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ENGIN — Pixel Iso Engine v2.0</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -70,6 +71,49 @@
   }
   .weapon-slot.active { border-color: #ff2d4d; color: #fff; background: rgba(255,45,77,0.2); }
   .weapon-slot .key { font-size: 8px; color: #666; margin-top: 2px; }
+
+  /* === MOBILE CONTROLS === */
+  #mobile-controls { display: none; }
+  @media (pointer: coarse), (max-width: 768px) {
+    #mobile-controls { display: block; }
+    #config-panel { display: none; }
+    #crosshair { display: none; }
+    #weapon-slots { bottom: 130px; pointer-events: auto; }
+    .weapon-slot { width: 44px; height: 44px; pointer-events: auto; }
+    #ui { font-size: 13px; top: 10px; left: 10px; }
+    .bar-container { width: 130px; height: 10px; }
+    #kill-feed { display: none; }
+  }
+
+  #joystick-zone {
+    position: absolute; bottom: 20px; left: 20px; width: 150px; height: 150px;
+    z-index: 30; touch-action: none;
+  }
+  #joystick-base {
+    position: absolute; bottom: 0; left: 0; width: 130px; height: 130px;
+    border-radius: 50%; background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+  #joystick-thumb {
+    position: absolute; width: 50px; height: 50px; border-radius: 50%;
+    background: rgba(255,45,77,0.5); border: 2px solid rgba(255,45,77,0.8);
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    transition: none;
+  }
+
+  #action-buttons {
+    position: absolute; bottom: 20px; right: 20px; z-index: 30; touch-action: none;
+  }
+  .action-btn {
+    width: 70px; height: 70px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.08); color: #fff; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    position: absolute; user-select: none; -webkit-user-select: none;
+  }
+  .action-btn:active, .action-btn.pressed { background: rgba(255,45,77,0.4); border-color: #ff2d4d; }
+  #btn-fire { bottom: 0; right: 0; width: 80px; height: 80px; font-size: 28px; }
+  #btn-jump { bottom: 10px; right: 95px; width: 60px; height: 60px; }
+  #btn-weapon { bottom: 85px; right: 45px; width: 55px; height: 55px; font-size: 16px; }
 </style>
 </head>
 <body>
@@ -93,10 +137,23 @@
 </div>
 
 <div id="weapon-slots">
-  <div class="weapon-slot active" id="ws-1"><span>🔫</span><span class="key">[1]</span></div>
-  <div class="weapon-slot" id="ws-2"><span>💥</span><span class="key">[2]</span></div>
-  <div class="weapon-slot" id="ws-3"><span>⚡</span><span class="key">[3]</span></div>
-  <div class="weapon-slot" id="ws-4"><span>🚀</span><span class="key">[4]</span></div>
+  <div class="weapon-slot active" id="ws-1" data-weapon="0"><span>🔫</span><span class="key">[1]</span></div>
+  <div class="weapon-slot" id="ws-2" data-weapon="1"><span>💥</span><span class="key">[2]</span></div>
+  <div class="weapon-slot" id="ws-3" data-weapon="2"><span>⚡</span><span class="key">[3]</span></div>
+  <div class="weapon-slot" id="ws-4" data-weapon="3"><span>🚀</span><span class="key">[4]</span></div>
+</div>
+
+<div id="mobile-controls">
+  <div id="joystick-zone">
+    <div id="joystick-base">
+      <div id="joystick-thumb"></div>
+    </div>
+  </div>
+  <div id="action-buttons">
+    <div class="action-btn" id="btn-fire">🔥</div>
+    <div class="action-btn" id="btn-jump">⬆</div>
+    <div class="action-btn" id="btn-weapon">🔄</div>
+  </div>
 </div>
 
 <div id="powerup-notif"></div>
@@ -216,6 +273,14 @@ class InputManager {
     this.camera = camera;
     this._aimTarget = new THREE.Vector3();
 
+    // Touch state
+    this.isMobile = ('ontouchstart' in window) || window.matchMedia('(pointer: coarse)').matches;
+    this.touch = { moveX: 0, moveZ: 0, firing: false, jump: false, aimAngle: 0 };
+    this._joystickActive = false;
+    this._joystickOrigin = { x: 0, y: 0 };
+    this._joystickTouchId = null;
+
+    // Desktop input
     window.addEventListener('keydown', e => { this.keys[e.key.toLowerCase()] = true; e.preventDefault(); });
     window.addEventListener('keyup', e => { this.keys[e.key.toLowerCase()] = false; });
 
@@ -231,9 +296,99 @@ class InputManager {
     window.addEventListener('mousedown', () => this.mouse.down = true);
     window.addEventListener('mouseup', () => this.mouse.down = false);
     window.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Mobile touch controls
+    if (this.isMobile) this._initTouch();
+  }
+
+  _initTouch() {
+    const joystickZone = document.getElementById('joystick-zone');
+    const joystickThumb = document.getElementById('joystick-thumb');
+    const joystickBase = document.getElementById('joystick-base');
+    const btnFire = document.getElementById('btn-fire');
+    const btnJump = document.getElementById('btn-jump');
+    const btnWeapon = document.getElementById('btn-weapon');
+
+    const baseRadius = 65; // half of 130px base
+
+    // Joystick
+    joystickZone.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      this._joystickTouchId = t.identifier;
+      const rect = joystickBase.getBoundingClientRect();
+      this._joystickOrigin.x = rect.left + rect.width / 2;
+      this._joystickOrigin.y = rect.top + rect.height / 2;
+      this._joystickActive = true;
+    }, { passive: false });
+
+    joystickZone.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        if (t.identifier === this._joystickTouchId) {
+          let dx = t.clientX - this._joystickOrigin.x;
+          let dy = t.clientY - this._joystickOrigin.y;
+          const dist = Math.hypot(dx, dy);
+          const maxDist = baseRadius;
+
+          if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
+
+          joystickThumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+          // Normalize to -1..1
+          const nx = dx / maxDist;
+          const ny = dy / maxDist;
+
+          // Map screen coords to isometric: screen-right = +X, screen-down = +Z
+          this.touch.moveX = nx;
+          this.touch.moveZ = ny;
+
+          // Auto-aim in movement direction
+          if (dist > 10) {
+            this.touch.aimAngle = Math.atan2(nx, ny);
+          }
+        }
+      }
+    }, { passive: false });
+
+    const resetJoystick = (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === this._joystickTouchId) {
+          this._joystickActive = false;
+          this._joystickTouchId = null;
+          this.touch.moveX = 0;
+          this.touch.moveZ = 0;
+          joystickThumb.style.transform = 'translate(-50%, -50%)';
+        }
+      }
+    };
+    joystickZone.addEventListener('touchend', resetJoystick, { passive: false });
+    joystickZone.addEventListener('touchcancel', resetJoystick, { passive: false });
+
+    // Fire button (hold to fire)
+    btnFire.addEventListener('touchstart', (e) => { e.preventDefault(); this.touch.firing = true; btnFire.classList.add('pressed'); }, { passive: false });
+    btnFire.addEventListener('touchend', (e) => { e.preventDefault(); this.touch.firing = false; btnFire.classList.remove('pressed'); }, { passive: false });
+    btnFire.addEventListener('touchcancel', () => { this.touch.firing = false; btnFire.classList.remove('pressed'); });
+
+    // Jump button
+    btnJump.addEventListener('touchstart', (e) => { e.preventDefault(); this.touch.jump = true; btnJump.classList.add('pressed'); }, { passive: false });
+    btnJump.addEventListener('touchend', (e) => { e.preventDefault(); this.touch.jump = false; btnJump.classList.remove('pressed'); }, { passive: false });
+    btnJump.addEventListener('touchcancel', () => { this.touch.jump = false; btnJump.classList.remove('pressed'); });
+
+    // Weapon cycle
+    btnWeapon.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      btnWeapon.classList.add('pressed');
+      // Dispatch custom event for engine to handle
+      window.dispatchEvent(new CustomEvent('weapon-cycle'));
+    }, { passive: false });
+    btnWeapon.addEventListener('touchend', () => btnWeapon.classList.remove('pressed'));
   }
 
   getAimAngle(playerPos) {
+    if (this.isMobile) {
+      return this.touch.aimAngle;
+    }
     this.raycaster.setFromCamera(this.mouseNDC, this.camera);
     if (this.raycaster.ray.intersectPlane(this.groundPlane, this._aimTarget)) {
       return Math.atan2(this._aimTarget.x - playerPos.x, this._aimTarget.z - playerPos.z);
@@ -241,7 +396,35 @@ class InputManager {
     return 0;
   }
 
+  isFiring() {
+    return this.isMobile ? this.touch.firing : this.mouse.down;
+  }
+
+  isJumping() {
+    if (this.isMobile) {
+      const j = this.touch.jump;
+      this.touch.jump = false; // consume
+      return j;
+    }
+    return this.keys[' '];
+  }
+
+  getMovement() {
+    if (this.isMobile) {
+      return { x: this.touch.moveX, z: this.touch.moveZ };
+    }
+    let x = 0, z = 0;
+    if (this.keys['a']) x = -1;
+    if (this.keys['d']) x = 1;
+    if (this.keys['w']) z = -1;
+    if (this.keys['s']) z = 1;
+    // Normalize diagonal
+    if (x !== 0 && z !== 0) { x *= 0.707; z *= 0.707; }
+    return { x, z };
+  }
+
   isMoving() {
+    if (this.isMobile) return Math.abs(this.touch.moveX) > 0.1 || Math.abs(this.touch.moveZ) > 0.1;
     return this.keys['w'] || this.keys['a'] || this.keys['s'] || this.keys['d'];
   }
 }
@@ -409,28 +592,19 @@ class Player extends Entity {
   }
 
   update(dt, time, input, physics, platforms, engine) {
-    this.vel.x = 0;
-    this.vel.z = 0;
     const spd = this.baseSpeed;
-    if (input.keys['a']) this.vel.x = -spd;
-    if (input.keys['d']) this.vel.x = spd;
-    if (input.keys['w']) this.vel.z = -spd;
-    if (input.keys['s']) this.vel.z = spd;
+    const mov = input.getMovement();
+    this.vel.x = mov.x * spd;
+    this.vel.z = mov.z * spd;
 
-    // Diagonal normalization
-    if (this.vel.x !== 0 && this.vel.z !== 0) {
-      this.vel.x *= 0.707;
-      this.vel.z *= 0.707;
-    }
-
-    if (input.keys[' '] && this.onGround) {
+    if (input.isJumping() && this.onGround) {
       this.vel.y = 13;
       this.onGround = false;
     }
 
     this.mesh.rotation.y = input.getAimAngle(this.mesh.position);
 
-    if (input.mouse.down && this.cooldown <= 0) this.shoot(engine);
+    if (input.isFiring() && this.cooldown <= 0) this.shoot(engine);
     this.cooldown -= dt;
 
     physics.resolveMovement(this, 20, 40, 20, platforms, dt);
@@ -732,13 +906,32 @@ class GameEngine {
   }
 
   _setupEvents() {
+    const weapons = ['pistol', 'shotgun', 'chaingun', 'rpg'];
+
     window.addEventListener('keydown', e => {
-      const weapons = ['pistol', 'shotgun', 'chaingun', 'rpg'];
       const idx = parseInt(e.key) - 1;
       if (idx >= 0 && idx < 4) {
         this.player.weapon = weapons[idx];
         this.ui.setWeapon(idx);
       }
+    });
+
+    // Mobile weapon cycle (button)
+    window.addEventListener('weapon-cycle', () => {
+      const idx = (weapons.indexOf(this.player.weapon) + 1) % weapons.length;
+      this.player.weapon = weapons[idx];
+      this.ui.setWeapon(idx);
+    });
+
+    // Weapon slots tappable on mobile
+    document.querySelectorAll('.weapon-slot').forEach(slot => {
+      slot.style.pointerEvents = 'auto';
+      slot.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const idx = parseInt(slot.dataset.weapon);
+        this.player.weapon = weapons[idx];
+        this.ui.setWeapon(idx);
+      }, { passive: false });
     });
 
     document.getElementById('light-slider').addEventListener('input', e => {
