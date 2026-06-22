@@ -1731,8 +1731,8 @@ class GameEngine {
     const weapons = ['pistol', 'shotgun', 'chaingun', 'rpg'];
 
     window.addEventListener('keydown', e => {
-      // Debug toggle
-      if (e.key === '`') { this.debugOverlay.toggle(); return; }
+      // Debug toggle — Backquote physical key (works on all keyboard layouts)
+      if (e.code === 'Backquote' || e.key === 'F3') { e.preventDefault(); this.debugOverlay.toggle(); return; }
 
       if (e.key === 'Escape') {
         if (this.state === STATES.PLAYING) this._showState(STATES.PAUSED);
